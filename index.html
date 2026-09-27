@@ -241,6 +241,7 @@ export enum Backend {
   NodeJS,
   Django,
   Flask,
+  FastAPI,
   Celery,
 }
 
@@ -259,6 +260,7 @@ export enum Storage {
   MySQL,
   MongoDB,
   Redis,
+  SQLite,
 }
 
 export enum Ops {
@@ -439,6 +441,14 @@ export class ExperienceController {
 }
 
 export const PORTFOLIO = [
+  {
+    repo: 'GetFitApp',
+    private: true,
+    about: 'Telegram fitness assistant: logs meals from a photo or a line of text via Claude, '
+      + 'computes calorie and macro targets, tracks weight and sends reminders; '
+      + 'React Mini App served from the same process',
+    stack: ['aiogram', Backend.FastAPI, 'Claude', 'Langfuse', Storage.SQLite, Frontend.React],
+  },
   {
     repo: 'wb-api',
     private: true,
