@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daniil Liagin · daniil-liagin.ts</title>
+<meta name="description" content="Daniil Liagin: Solution Architect and full-stack engineer building LLM applications and multi-agent systems.">
+<meta property="og:title" content="Daniil Liagin · daniil-liagin.ts">
+<meta property="og:description" content="Solution Architect · Full-stack. CV written as a TypeScript file.">
+<meta property="og:image" content="https://suselfluf.github.io/avatar.jpg">
+<link rel="icon" href="avatar.jpg">
+<style>body { margin: 0; }</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Victor+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap">
+<style>
+  /* Single dark "editor" world by design: one custom theme, painted explicitly. */
+  :root {
+    color-scheme: dark;
+    --desk: #0b0e13;
+    --bg: #12161d;
+    --pane: #141922;
+    --chrome: #0f1318;
+    --line: #1f2631;
+    --hover: #19202a;
+    --guide: #242c38;
+    --gutter: #3b4656;
+    --text: #c6ccd6;
+    --punct: #8a94a6;
+    --comment: #6f7d91;
+    --kw: #c29bff;
+    --type: #6fd3c1;
+    --fn: #7cb0ff;
+    --str: #e6b673;
+    --num: #f59e7a;
+    --dec: #ff8f9e;
+    --prop: #d9dfe8;
+    --tag: #ff8f9e;
+    --todo-fg: #ffcf66;
+    --todo-bg: #3a2f12;
+    --accent: #6fd3c1;
+    --mono: "Victor Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--desk);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.62;
+    padding-inline: 16px;
+    padding-block: 28px 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .window {
+    max-width: 1240px;
+    margin: 0 auto;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,.7);
+  }
+  .crumbs {
+    display: flex; flex-wrap: wrap; gap: .6ch; align-items: center;
+    padding: 7px 14px;
+    background: var(--chrome);
+    border-bottom: 1px solid var(--line);
+    color: var(--comment);
+    font-size: 12px;
+  }
+  .crumbs b { color: var(--text); font-weight: 500; }
+  .crumbs .sep { color: var(--gutter); }
+
+  .split { display: grid; grid-template-columns: minmax(0, 36fr) minmax(0, 64fr); }
+  .pane { min-width: 0; background: var(--pane); }
+  .pane + .pane { border-left: 1px solid var(--line); background: var(--bg); }
+
+  .tabs {
+    display: flex; gap: 0;
+    background: var(--chrome);
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .tab {
+    padding: 8px 16px;
+    color: var(--comment);
+    border-right: 1px solid var(--line);
+    display: flex; align-items: center; gap: 1ch;
+  }
+  a.tab { text-decoration: none; }
+  a.tab:hover, a.tab:focus-visible { color: var(--text); outline: none; }
+  .tab.on { color: var(--text); background: var(--pane); box-shadow: inset 0 1px 0 var(--accent); }
+  .pane + .pane .tab.on { background: var(--bg); }
+  .tab .ts { color: #3178c6; font-weight: 700; font-size: 10px; letter-spacing: .04em; }
+  .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text); opacity: .7; }
+
+  .code { counter-reset: ln; padding-block: 14px 22px; --gut: 5ch; }
+  .l {
+    position: relative;
+    min-height: 1.62em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding-left: calc(var(--gut) + (var(--i, 0) + 2) * 1ch);
+    padding-right: 16px;
+    text-indent: -2ch;
+    background-image: repeating-linear-gradient(90deg, var(--guide) 0 1px, transparent 1px 2ch);
+    background-size: calc(var(--i, 0) * 1ch) 100%;
+    background-position: calc(var(--gut) + 2ch) 0;
+    background-repeat: no-repeat;
+  }
+  .l::before {
+    counter-increment: ln;
+    content: counter(ln);
+    position: absolute; left: 0; top: 0;
+    width: calc(var(--gut) - 1ch);
+    text-align: right;
+    text-indent: 0;
+    color: var(--gutter);
+    font-variant-numeric: tabular-nums;
+    font-size: .92em;
+  }
+  .l:hover { background-color: var(--hover); }
+  .l:hover::before { color: var(--text); }
+  .l.flash { animation: flash 1.4s ease-out; }
+  @keyframes flash { from { background-color: var(--todo-bg); } }
+
+  /* syntax */
+  .k  { color: var(--kw); font-style: italic; }
+  .t  { color: var(--type); }
+  .t.big { font-size: 1.14em; font-weight: 600; letter-spacing: .01em; }
+  .f  { color: var(--fn); }
+  .s  { color: var(--str); }
+  .s a { color: inherit; text-decoration: underline; text-decoration-color: rgba(230,182,115,.35); text-underline-offset: 3px; }
+  .s a:hover, .s a:focus-visible { text-decoration-color: currentColor; outline: none; }
+  .n  { color: var(--num); }
+  .m  { color: var(--num); }
+  .d  { color: var(--dec); font-style: italic; }
+  .p  { color: var(--prop); }
+  .o  { color: var(--punct); }
+  .tg { color: var(--tag); }
+  .c  { color: var(--comment); font-style: italic; }
+  .c .dt { color: var(--kw); font-style: italic; }
+  .c a { color: inherit; text-underline-offset: 3px; }
+  .todo { color: var(--todo-fg); background: var(--todo-bg); font-style: normal; font-weight: 600; padding: 0 .3ch; border-radius: 2px; }
+
+  .photo { padding-left: calc(var(--gut) + 6ch); padding-block: 6px 8px; position: relative; }
+  .photo::before { content: ""; position: absolute; left: calc(var(--gut) + 2ch); top: 0; bottom: 0; border-left: 1px solid var(--guide); }
+  .photo::after { content: ""; position: absolute; left: calc(var(--gut) + 4ch); top: 0; bottom: 0; border-left: 1px solid var(--guide); }
+  .photo img {
+    display: block;
+    width: min(100%, 176px);
+    height: auto;
+    border: 1px solid var(--line);
+    outline: 1px dashed var(--gutter);
+    outline-offset: 4px;
+  }
+
+  .cursor { display: inline-block; width: .6ch; height: 1.15em; vertical-align: -.2em; background: var(--accent); margin-left: 2px; animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .status {
+    display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: center;
+    padding: 5px 14px;
+    background: #0d2a2a;
+    border-top: 1px solid var(--line);
+    color: #9fe3d8;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .status .grow { flex: 1; }
+  .status button {
+    font: inherit; color: var(--todo-fg); background: none; border: 0; padding: 0; cursor: pointer;
+  }
+  .status button:focus-visible { outline: 1px solid var(--todo-fg); outline-offset: 2px; }
+
+  @media (max-width: 860px) {
+    body { font-size: 12px; padding-block: 16px 24px; }
+    .split { grid-template-columns: minmax(0, 1fr); }
+    .pane + .pane { border-left: 0; border-top: 1px solid var(--line); }
+    .code { --gut: 4ch; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cursor, .l.flash { animation: none; }
+  }
+</style>
+
+<div class="window">
+  <div class="crumbs">
+    <span>cv</span><span class="sep">›</span><span>src</span><span class="sep">›</span><b>daniil-liagin.ts</b><span class="sep">›</span><span>DaniilLiagin</span>
+  </div>
+  <div class="split">
+    <section class="pane" aria-label="stack.ts">
+      <div class="tabs"><div class="tab on"><span class="ts">TS</span>stack.ts</div></div>
+      <div class="code" data-src="left"></div>
+    </section>
+    <section class="pane" aria-label="daniil-liagin.ts">
+      <div class="tabs">
+        <div class="tab on"><span class="ts">TS</span>daniil-liagin.ts<span class="dot" title="unsaved"></span></div>
+        <a class="tab" href="https://github.com/Suselfluf" target="_blank" rel="noopener"><span class="ts">MD</span>README.md</a>
+      </div>
+      <div class="code" data-src="right"></div>
+    </section>
+  </div>
+  <div class="status">
+    <span>⎇ main</span>
+    <span>✓ 0 problems</span>
+    <button type="button" id="todo-btn" title="Jump to next TODO">⚠ <span id="todo-count">0</span> TODO</button>
+    <span class="grow"></span>
+    <span id="pos">Ln 1, Col 1</span>
+    <span>Spaces: 2</span>
+    <span>UTF-8</span>
+    <span>LF</span>
+    <span>TypeScript</span>
+  </div>
+</div>
+
+<script type="text/plain" id="src-left">
+const Me = () => (
+  <figure>
+%%PHOTO%%
+  </figure>
+);
+
+export interface Developer {
+  learn(): never; // never returns
+}
+
+export enum Languages {
+  TypeScript,
+  JavaScript,
+  Python,
+  PHP,
+  Java,
+}
+
+export enum Backend {
+  NestJS,
+  NodeJS,
+  Django,
+  Flask,
+  Celery,
+}
+
+export enum Frontend {
+  React,
+  NextJS,
+  ReactNative,
+  Angular,
+  ThreeJS,
+  Vite,
+  Flutter,
+}
+
+export enum Storage {
+  PostgreSQL,
+  MySQL,
+  MongoDB,
+  Redis,
+}
+
+export enum Ops {
+  Docker,
+  Linux,
+  GitHubActions,
+}
+
+export enum Craft {
+  MultiAgentSystems,
+  LLMTools,
+  TelegramBots,
+  Photogrammetry, // Meshroom · AliceVision
+}
+
+export enum Spoken {
+  Russian = 'native',
+  English = 'C1',
+}
+
+export type Hobby =
+  | 'competitive programming'
+  | 'psychology'
+  | 'hockey'; // Candidate Master of Sports
+
+export const LINKS = {
+  github: 'github.com/Suselfluf',
+  telegram: 't.me/tgt_nedanil_nesocio',
+  linkedin: 'linkedin.com/in/daniil-liagin',
+} as const;
+</script>
+
+<script type="text/plain" id="src-right">
+import { Injectable, Module, Controller, Get } from '@nestjs/common';
+import { Developer, Languages, Backend, Frontend, Craft } from './stack';
+
+/**
+ * @summary Full-stack engineer building multi-layer applications
+ * on top of LLMs: APIs, multi-agent systems, Telegram bots.
+ * Spec-driven. Occasionally I turn photos of clothes into 3D models.
+ */
+@Injectable()
+export class DaniilLiagin implements Developer {
+  readonly name = 'Daniil Liagin';
+  readonly role = 'Solution Architect · Full-stack';
+  readonly focus = [Craft.MultiAgentSystems, Craft.LLMTools];
+  readonly location = 'Kazakhstan';
+  readonly email = 'danya.lyagin@gmail.com';
+  readonly github = 'https://github.com/Suselfluf';
+  readonly openToWork = false; // shipping at NLT
+
+  learn(): never {
+    while (true) {} // "enormous thirst for knowledge" © CV 2023
+  }
+}
+
+@Module({
+  imports: [
+    SynergyUniversity.forRoot({
+      program: 'Postgraduate (PhD track), Management',
+      status: 'in progress',
+    }),
+    InnopolisUniversity.forRoot({
+      degree: 'MSc, Software Engineering',
+      period: range('2022-09', '2024-08'),
+    }),
+    UniversityOfBolton.forRoot({
+      degree: 'BEng, Software Engineering (Top-up)',
+      period: range('2022-01', '2023-06'),
+    }),
+    Qualifi.forRoot({
+      diploma: 'Level 5 in Information Technology',
+      credits: 120,
+      issued: '2022-04',
+    }),
+    UlsterUniversity.forRoot({
+      degree: 'BSc Hons Computing Systems',
+      campus: 'London',
+      period: range('2021-02', '2021-08'),
+    }),
+    PenzaStateUniversity.forRoot({
+      degree: 'Bachelor, Business Informatics',
+      period: range('2018-09', '2022-08'),
+    }),
+    ComputerAcademyStep.forRoot({
+      track: 'Software Development',
+      period: range('2020-12', '2021-04'),
+    }),
+  ],
+})
+export class EducationModule {}
+
+@Controller('experience')
+export class ExperienceController {
+  @Get('nlt')
+  neuralLanguageTechnologies(): Position {
+    return {
+      company: 'LLC Neural Language Technologies',
+      role: 'Solution Architect',
+      period: range('2023-12', 'present'),
+      /* Architecture and delivery of multi-layer LLM applications
+         and multi-agent systems. */
+    };
+  }
+
+  @Get('gazstroiprom')
+  gazstroiprom(): Position {
+    return {
+      role: 'Front-end Developer (internship)',
+      period: range('2023-07', '2023-08'),
+      stack: ['Preact', 'Redux Thunk', 'React Hook Form', Frontend.Vite, Backend.Flask],
+      /* Team of 6. Proposed the architecture and stack, built the
+         front end and its API layer, reviewed designs and split
+         work for a second front-end developer. Delivered on time
+         and within budget; the customer chose to continue. */
+    };
+  }
+
+  @Get('technokratos')
+  technokratos(): Position {
+    return {
+      role: 'Front-end Developer',
+      period: range('2023-02', '2023-08'),
+      stack: [Frontend.Angular, 'Spring Boot'],
+      /* Team of 4. Turned customer requirements into technical
+         docs, automated user feedback collection and built
+         advanced management of courses and lessons. */
+    };
+  }
+
+  @Get('croki/looks')
+  crokiLooks(): Position {
+    return {
+      role: 'Web Developer',
+      period: range('2023-01', '2023-07'),
+      stack: [Frontend.React, Frontend.ThreeJS, Backend.Django, Backend.Flask, Craft.Photogrammetry],
+      /* Web app for assembling outfits from clothing items,
+         rendered as a 3D model with an AR preview. Two services:
+         Django REST and a Flask + Meshroom/AliceVision pipeline
+         on Redis. End-user survey confirmed the value. */
+    };
+  }
+
+  @Get('moonsolution')
+  moonSolution(): Position {
+    return {
+      role: 'React / React Native Developer',
+      period: range('2022-03', '2022-06'),
+      shipped: 'https://moonsolution.ru/easy',
+      /* "Easy" team: page layout, request-layer optimisation and
+         code review; took the app to release readiness. */
+    };
+  }
+
+  @Get('croki/store')
+  crokiStore(): Position {
+    return {
+      role: 'Web Developer',
+      period: range('2021-05', '2022-03'),
+      stack: ['Bitrix24'],
+      /* Clothing store on Bitrix24: design and layout of key
+         pages, liaison with the customer, requirements written
+         up as BPMN diagrams. Started as my bachelor's project. */
+    };
+  }
+
+  @Get('center-of-law-support')
+  centerOfLawSupport(): Position {
+    return {
+      role: 'Web & Multimedia Developer',
+      period: range('2019-12', '2021-05'),
+      shipped: 'http://centerpp.com',
+      stack: ['HTML', 'CSS', Languages.JavaScript],
+      /* Built the firm's website from scratch and automated the
+         intake survey for new clients, which grew the client flow. */
+    };
+  }
+}
+
+export const PORTFOLIO = [
+  {
+    repo: 'wb-api',
+    private: true,
+    about: 'Zero-dependency TypeScript client for the Wildberries API, generated from Swagger',
+  },
+  {
+    repo: 'tg-assistant-vectorsearch',
+    private: true,
+    about: 'Telegram assistant on NestJS with vector-search retrieval',
+  },
+  {
+    repo: 'hunter-minimum-quiz-bot',
+    private: true,
+    about: 'Telegram bot for practising the Russian hunting exam · SQLite, Docker',
+  },
+  {
+    repo: 'https://github.com/Suselfluf/meshroom-pipeline',
+    about: 'Flask API + Celery/Redis queue that turns image sets into 3D models',
+  },
+  {
+    repo: 'https://github.com/Suselfluf/clothes-phtogrammetry',
+    about: 'Clothes photos → 3D objects, previewed in AR',
+  },
+  { about: 'Agona: an educational platform' },
+  { about: 'Tool for annotating vehicles within traffic zones' },
+  { about: 'Mobile language-learning app built on graph theory' },
+] satisfies Project[];
+
+export default DaniilLiagin;
+</script>
+
+<script>
+(() => {
+  const PHOTO = "avatar.jpg";
+  const KW = new Set("import from export const class enum type interface readonly implements return async await function new as satisfies default extends private public static void null true false typeof keyof of in let while if never boolean string number".split(" "));
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const hrefFor = v => {
+    if (/^https?:\/\//.test(v)) return v;
+    if (/^(github\.com|t\.me|linkedin\.com)\//.test(v)) return "https://" + v;
+    return null;
+  };
+
+  const comment = seg => {
+    let h = esc(seg)
+      .replace(/(https?:\/\/[^\s*]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+      .replace(/(^|\s)(@\w+)/g, '$1<span class="dt">$2</span>')
+      .replace(/(TODO\([^)]*\):?)/g, '<span class="todo">$1</span>');
+    return '<span class="c">' + h + "</span>";
+  };
+
+  const peek = (line, i) => { while (i < line.length && line[i] === " ") i++; return line.slice(i, i + 2); };
+
+  function highlight(line, st) {
+    let out = "", i = 0, prev = "";
+    while (i < line.length) {
+      if (st.block) {
+        const end = line.indexOf("*/", i);
+        const seg = end < 0 ? line.slice(i) : line.slice(i, end + 2);
+        out += comment(seg); i += seg.length;
+        if (end >= 0) st.block = false;
+        continue;
+      }
+      const rest = line.slice(i), ch = line[i];
+      if (rest.startsWith("//")) { out += comment(rest); break; }
+      if (rest.startsWith("/*")) {
+        const end = line.indexOf("*/", i + 2);
+        const seg = end < 0 ? rest : line.slice(i, end + 2);
+        out += comment(seg); i += seg.length;
+        if (end < 0) st.block = true;
+        continue;
+      }
+      if (ch === "'" || ch === '"' || ch === "`") {
+        let j = i + 1;
+        while (j < line.length && line[j] !== ch) j++;
+        const inner = line.slice(i + 1, j);
+        const href = hrefFor(inner);
+        const body = href ? '<a href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(inner) + "</a>" : esc(inner);
+        out += '<span class="s">' + ch + body + ch + "</span>";
+        i = j + 1; prev = "s"; continue;
+      }
+      if (ch === "@" && /[A-Z]/.test(line[i + 1] || "")) {
+        const m = rest.match(/^@\w+/)[0];
+        out += '<span class="d">' + m + "</span>"; i += m.length; continue;
+      }
+      if (ch === "<" && /^<\/?[a-z]/.test(rest)) {
+        const m = rest.match(/^<\/?[a-z]+>?/)[0];
+        out += '<span class="tg">' + esc(m) + "</span>"; i += m.length; continue;
+      }
+      if (/\d/.test(ch)) {
+        const m = rest.match(/^\d+/)[0];
+        out += '<span class="n">' + m + "</span>"; i += m.length; continue;
+      }
+      if (/[A-Za-z_$]/.test(ch)) {
+        const m = rest.match(/^[\w$]+/)[0];
+        const after = peek(line, i + m.length);
+        let cls;
+        if (KW.has(m)) cls = "k";
+        else if (prev === ".") cls = /^[A-Z]/.test(m) && after[0] !== "(" ? "m" : "f";
+        else if (after[0] === "(") cls = "f";
+        else if (/^[A-Z]/.test(m)) cls = (prev === "class" || prev === "enum" || prev === "interface" || prev === "type") ? "t big" : "t";
+        else if (after[0] === ":" || (after[0] === "=" && after[1] !== ">" && after[1] !== "=")) cls = "p";
+        else if (after[0] === "," || after[0] === "?") cls = "p";
+        else cls = "";
+        out += cls ? '<span class="' + cls + '">' + m + "</span>" : m;
+        i += m.length; prev = KW.has(m) ? m : "id"; continue;
+      }
+      if (ch === " ") { out += " "; i++; continue; }
+      out += '<span class="o">' + esc(ch) + "</span>";
+      prev = ch; i++;
+    }
+    return out;
+  }
+
+  function render(name) {
+    const host = document.querySelector('[data-src="' + name + '"]');
+    const src = document.getElementById("src-" + name).textContent.replace(/^\n/, "").replace(/\s+$/, "");
+    const st = { block: false };
+    const html = [];
+    for (const line of src.split("\n")) {
+      if (line.trim() === "%%PHOTO%%") {
+        html.push('<div class="photo"><img src="' + PHOTO + '" alt="Daniil Liagin" width="369" height="500"></div>');
+        continue;
+      }
+      const indent = line.match(/^ */)[0].length;
+      html.push('<div class="l" style="--i:' + indent + '">' + highlight(line.slice(indent), st) + "</div>");
+    }
+    host.innerHTML = html.join("");
+  }
+
+  render("left");
+  render("right");
+
+  const last = document.querySelector('[data-src="right"] .l:last-child');
+  if (last) last.insertAdjacentHTML("beforeend", '<span class="cursor" aria-hidden="true"></span>');
+
+  const todos = [...document.querySelectorAll(".todo")].map(t => t.closest(".l"));
+  document.getElementById("todo-count").textContent = todos.length;
+  document.getElementById("todo-btn").hidden = todos.length === 0;
+  let k = 0;
+  document.getElementById("todo-btn").addEventListener("click", () => {
+    if (!todos.length) return;
+    const el = todos[k++ % todos.length];
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  });
+
+  const pos = document.getElementById("pos");
+  document.querySelectorAll(".code").forEach(code => {
+    code.addEventListener("mouseover", e => {
+      const l = e.target.closest(".l");
+      if (!l) return;
+      const n = [...code.querySelectorAll(".l")].indexOf(l) + 1;
+      pos.textContent = "Ln " + n + ", Col " + ((parseInt(l.style.getPropertyValue("--i")) || 0) + 1);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
