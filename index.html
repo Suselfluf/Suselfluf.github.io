@@ -570,7 +570,7 @@ export default DaniilLiagin;
     const html = [];
     for (const line of src.split("\n")) {
       if (line.trim() === "%%PHOTO%%") {
-        html.push('<div class="photo"><img src="' + PHOTO + '" alt="Daniil Liagin" width="369" height="500"></div>');
+        html.push('<div class="photo"><img src="' + PHOTO + '" alt="Daniil Liagin" width="512" height="512"></div>');
         continue;
       }
       const indent = line.match(/^ */)[0].length;
